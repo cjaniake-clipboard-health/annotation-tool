@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Ticket Annotation Tool{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <h1 class="text-3xl font-bold text-indigo-700 mb-6 text-center">Login</h1>
+    
+    <div class="bg-white shadow-md rounded-lg p-8">
+        <div class="text-center mb-8">
+            <p class="text-gray-600 mb-6">
+                Please sign in with your company Google account to access the Ticket Annotation Tool.
+            </p>
+            
+            <a href="{{ url_for('auth.login') }}" class="inline-flex items-center justify-center bg-white border border-gray-300 rounded-lg shadow-sm px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 w-full">
+                <svg class="h-5 w-5 mr-3" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" fill="#4285F4"/>
+                    <path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" fill="#34A853" transform="translate(0 4)"/>
+                    <path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" fill="#FBBC05" transform="translate(0 8)"/>
+                    <path d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z" fill="#EA4335" transform="translate(0 12)"/>
+                </svg>
+                Sign in with Google
+            </a>
+        </div>
+        
+        <div class="text-center text-sm text-gray-500">
+            <p>Only users with company email addresses can access this tool.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

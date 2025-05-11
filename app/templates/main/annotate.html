@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Annotate Ticket - Ticket Annotation Tool{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold text-indigo-700">Ticket Annotation</h1>
+        <div class="text-gray-600">
+            <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center text-indigo-600 hover:text-indigo-800">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
+    <!-- Progress Indicator -->
+    <div class="bg-white shadow-md rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <div>
+                <span class="font-medium">Ticket {{ current_position }} of {{ total_count }}</span>
+            </div>
+            <div class="flex space-x-2">
+                <button id="skip-button" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded">
+                    Skip
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ticket Details -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold text-indigo-600 mb-2">Ticket Details</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <span class="block text-sm font-medium text-gray-700">Ticket ID:</span>
+                    <span class="block text-lg">{{ ticket.ticket_id }}</span>
+                </div>
+                <div>
+                    <span class="block text-sm font-medium text-gray-700">Technical Issue Likelihood:</span>
+                    <span class="block text-lg {% if ticket.tech_issue_likelihood == 'very likely' %}text-red-600 font-semibold{% elif ticket.tech_issue_likelihood == 'somewhat likely' %}text-yellow-600{% else %}text-gray-600{% endif %}">
+                        {{ ticket.tech_issue_likelihood or 'Not specified' }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <span class="block text-sm font-medium text-gray-700">Subject:</span>
+                <span class="block text-lg font-medium">{{ ticket.subject }}</span>
+            </div>
+            
+            <div class="mb-4">
+                <span class="block text-sm font-medium text-gray-700">Categories:</span>
+                <div class="flex flex-wrap gap-2 mt-1">
+                    {% for category in ticket.categories %}
+                    <span class="inline-block bg-indigo-100 text-indigo-800 text-sm px-2 py-1 rounded">
+                        {{ category.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            {% if ticket.summary %}
+            <div class="mb-4">
+                <span class="block text-sm font-medium text-gray-700">Summary:</span>
+                <div class="mt-1 p-3 bg-gray-50 rounded-md">
+                    <p class="whitespace-pre-line">{{ ticket.summary }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if ticket.conversation %}
+            <div>
+                <span class="block text-sm font-medium text-gray-700">Conversation:</span>
+                <div class="mt-1 p-3 bg-gray-50 rounded-md max-h-96 overflow-y-auto">
+                    <p class="whitespace-pre-line">{{ ticket.conversation }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if ticket.issue_description %}
+            <div class="mb-4">
+                <span class="block text-sm font-medium text-gray-700">Issue Description by AI:</span>
+                <div class="mt-1 p-3 bg-gray-50 rounded-md">
+                    <p class="whitespace-pre-line">{{ ticket.issue_description }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Annotation Form -->
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h2 class="text-xl font-semibold text-indigo-600 mb-4">Is this an in-app technical issue?</h2>
+        
+        {% if latest_annotation %}
+        <div class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p class="text-yellow-800">
+                <span class="font-medium">Previous annotation:</span> 
+                {{ "Yes" if latest_annotation.is_app_issue else "No" }} 
+                by {{ latest_annotation.annotator.email }} 
+                on {{ latest_annotation.created_at.strftime('%Y-%m-%d %H:%M') }}
+            </p>
+            {% if latest_annotation.rationale %}
+            <p class="text-yellow-800 mt-2">
+                <span class="font-medium">Rationale:</span> {{ latest_annotation.rationale }}
+            </p>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <form id="annotation-form" class="space-y-4">
+            <input type="hidden" id="ticket-id" value="{{ ticket.id }}">
+            
+            <div class="flex space-x-4">
+                <button type="button" id="yes-button" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">
+                    Yes, it's an in-app issue
+                </button>
+                <button type="button" id="no-button" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg">
+                    No, it's not an in-app issue
+                </button>
+            </div>
+            
+            <div>
+                <label for="rationale" class="block text-sm font-medium text-gray-700 mb-1">Rationale (Optional)</label>
+                <textarea id="rationale" rows="3" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ticketId = document.getElementById('ticket-id').value;
+        const yesButton = document.getElementById('yes-button');
+        const noButton = document.getElementById('no-button');
+        const skipButton = document.getElementById('skip-button');
+        const rationaleField = document.getElementById('rationale');
+        
+        // Function to submit annotation
+        function submitAnnotation(isAppIssue) {
+            const rationale = rationaleField.value.trim();
+            
+            // Disable buttons during submission
+            yesButton.disabled = true;
+            noButton.disabled = true;
+            
+            // Submit annotation via API
+            fetch('/api/annotate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ticket_id: ticketId,
+                    is_app_issue: isAppIssue,
+                    rationale: rationale
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Go to next ticket
+                    goToNextTicket();
+                } else {
+                    alert('Error: ' + data.message);
+                    // Re-enable buttons
+                    yesButton.disabled = false;
+                    noButton.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while submitting the annotation.');
+                // Re-enable buttons
+                yesButton.disabled = false;
+                noButton.disabled = false;
+            });
+        }
+        
+        // Function to go to next ticket
+        function goToNextTicket() {
+            fetch(`/api/next_ticket?current_ticket_id=${ticketId}&category_id={{ category_id }}&status={{ status }}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = data.redirect;
+                    } else {
+                        alert('Error: ' + data.message);
+                        window.location.href = '{{ url_for("main.dashboard") }}';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while fetching the next ticket.');
+                    window.location.href = '{{ url_for("main.dashboard") }}';
+                });
+        }
+        
+        // Add event listeners
+        yesButton.addEventListener('click', function() {
+            submitAnnotation(true);
+        });
+        
+        noButton.addEventListener('click', function() {
+            submitAnnotation(false);
+        });
+        
+        skipButton.addEventListener('click', function() {
+            goToNextTicket();
+        });
+    });
+</script>
+{% endblock %}

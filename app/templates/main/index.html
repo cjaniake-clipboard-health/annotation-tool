@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - Ticket Annotation Tool{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto text-center">
+    <h1 class="text-3xl font-bold text-indigo-700 mb-6">Welcome to the Ticket Annotation Tool</h1>
+    
+    <div class="bg-white shadow-md rounded-lg p-8 mb-8">
+        <p class="text-lg mb-6">
+            This tool helps you annotate customer support tickets to identify in-app technical issues.
+        </p>
+        
+        <div class="mb-8">
+            <h2 class="text-xl font-semibold text-indigo-600 mb-4">Key Features:</h2>
+            <ul class="text-left max-w-md mx-auto space-y-2">
+                <li class="flex items-start">
+                    <svg class="h-6 w-6 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Dashboard with summary statistics
+                </li>
+                <li class="flex items-start">
+                    <svg class="h-6 w-6 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Filter tickets by category and date
+                </li>
+                <li class="flex items-start">
+                    <svg class="h-6 w-6 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Simple yes/no annotation interface
+                </li>
+                <li class="flex items-start">
+                    <svg class="h-6 w-6 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Data visualization with daily trends
+                </li>
+            </ul>
+        </div>
+        
+        <a href="{{ url_for('auth.login') }}" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200">
+            Login to Get Started
+        </a>
+    </div>
+    
+    <div class="text-gray-600">
+        <p>Please use your company email address to log in.</p>
+    </div>
+</div>
+{% endblock %}
