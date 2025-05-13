@@ -1,3 +1,8 @@
+"""
+Database models for the Ticket Annotation Tool.
+
+This module defines the database models for users, tickets, categories, and annotations.
+"""
 from datetime import datetime
 from flask_login import UserMixin
 from app import db, login_manager
@@ -10,10 +15,11 @@ class User(UserMixin, db.Model):
     annotations = db.relationship('Annotation', backref='annotator', lazy='dynamic')
 
     def __repr__(self):
-        return f'<User {self.email}>'
+        return '<User {}>'.format(self.email)
 
 @login_manager.user_loader
 def load_user(id):
+    """Load a user from the database by ID for Flask-Login."""
     return User.query.get(int(id))
 
 # Association table for many-to-many relationship between Ticket and Category
@@ -31,6 +37,7 @@ class Ticket(db.Model):
     tech_issue_likelihood = db.Column(db.String(64), nullable=True)
     subject = db.Column(db.String(256))
     issue_description = db.Column(db.Text, nullable=True)
+    created_at_zendesk = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -39,7 +46,7 @@ class Ticket(db.Model):
     annotations = db.relationship('Annotation', backref='ticket', lazy='dynamic')
     
     def __repr__(self):
-        return f'<Ticket {self.ticket_id}>'
+        return '<Ticket {}>'.format(self.ticket_id)
     
     def get_latest_annotation(self):
         """Return the most recent annotation for this ticket, or None if no annotations exist."""
@@ -59,7 +66,7 @@ class Category(db.Model):
     name = db.Column(db.String(64), index=True, unique=True)
     
     def __repr__(self):
-        return f'<Category {self.name}>'
+        return '<Category {}>'.format(self.name)
 
 class Annotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -72,4 +79,4 @@ class Annotation(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     def __repr__(self):
-        return f'<Annotation {self.id} for Ticket {self.ticket_id}>'
+        return '<Annotation {} for Ticket {}>'.format(self.id, self.ticket_id)

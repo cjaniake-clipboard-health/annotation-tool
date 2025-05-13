@@ -1,3 +1,9 @@
+"""
+Ticket Annotation Tool application package.
+
+This module initializes the Flask application and its extensions,
+registers blueprints, and sets up the database.
+"""
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate

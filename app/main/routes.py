@@ -1,20 +1,25 @@
+"""
+Main routes for the Ticket Annotation Tool.
+
+This module defines the routes for the main functionality of the application,
+including the dashboard, annotation interface, and data loading.
+"""
+# Standard library imports
 import os
-import pandas as pd
 import json
 from datetime import datetime, timedelta
-from flask import g
+
+# Third-party imports
+import pandas as pd
 import plotly
 import plotly.express as px
 from flask import render_template, redirect, url_for, request, jsonify, current_app, flash
 from flask_login import login_required, current_user
+
+# Local application imports
 from app import db
 from app.main import bp
 from app.models import Ticket, Category, Annotation, User
-
-@bp.before_app_request
-def before_request():
-    """Add current datetime to template context"""
-    g.now = datetime.now()
 
 @bp.route('/')
 def index():
@@ -27,9 +32,14 @@ def index():
 @login_required
 def dashboard():
     """Dashboard page with summary statistics and filtering"""
+
+    # Default date range for filtering
+    default_start_date = datetime(2025, 4, 1)  # fixed or (datetime.now() - timedelta(days=30))
+    default_end_date = datetime(2025, 4, 30)  # fixed or datetime.now()
+
     # Get filter parameters
-    start_date = request.args.get('start_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
-    end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+    start_date = request.args.get('start_date', default_start_date.strftime('%Y-%m-%d'))
+    end_date = request.args.get('end_date', default_end_date.strftime('%Y-%m-%d'))
     category_id = request.args.get('category_id', 'all')
     
     # Convert to datetime objects
@@ -41,6 +51,7 @@ def dashboard():
     
     # Prepare data for the summary table
     summary_data = []
+    chart_data = []
     
     for category in categories:
         # Base query for this category
@@ -72,32 +83,37 @@ def dashboard():
                 'negative': negative_count,
                 'total': unlabeled_count + positive_count + negative_count
             })
-    
-    # Create chart data - daily issues by category
-    annotations = Annotation.query.filter(
-        Annotation.created_at >= start_date_obj,
-        Annotation.created_at <= end_date_obj + timedelta(days=1)
-    ).all()
-    
-    chart_data = []
-    for annotation in annotations:
-        ticket = annotation.ticket
-        for category in ticket.categories:
-            if category_id == 'all' or int(category_id) == category.id:
+
+            for ticket_data in category_tickets:
+                # Get the most recent annotation for this ticket (if any)
+                latest_annotation = ticket_data.get_latest_annotation()
+                
+                # Use the annotation data if it exists, otherwise set is_app_issue to None
+                is_app_issue = 'unlabeled'
+                if latest_annotation:
+                    if latest_annotation.is_app_issue:
+                        is_app_issue = 'positive'
+                    else:
+                        is_app_issue = 'negative'
+                
                 chart_data.append({
-                    'date': annotation.created_at.strftime('%Y-%m-%d'),
+                    'date': ticket_data.created_at_zendesk.strftime('%Y-%m-%d'),
                     'category': category.name,
-                    'is_app_issue': annotation.is_app_issue
+                    'is_app_issue': is_app_issue
                 })
     
     # Create Plotly chart
     if chart_data:
         df = pd.DataFrame(chart_data)
+        #df.to_csv('chart_json.csv')
         # Group by date and category, count issues
-        df_grouped = df[df['is_app_issue'] == True].groupby(['date', 'category']).size().reset_index(name='count')
+        #df_grouped = df[df['is_app_issue'] == True].groupby(['date', 'category']).size().reset_index(name='count')
+        df_grouped = df.groupby(['date', 'category']).size().reset_index(name='count')
         
-        fig = px.line(df_grouped, x='date', y='count', color='category', 
-                     title='Daily App Issues by Category')
+        fig = px.line(df_grouped, x='date', y='count', color='category',
+                      title='Daily App Issues by Category')
+        #fig.write_image("chart_json.png")
+
         chart_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     else:
         chart_json = None
@@ -113,7 +129,12 @@ def dashboard():
 @bp.route('/annotate')
 @login_required
 def annotate():
-    """Annotation page for labeling tickets"""
+    """
+    Annotation page for labeling tickets.
+    
+    Displays a ticket for annotation based on filter criteria and allows users
+    to navigate through tickets.
+    """
     # Get filter parameters
     category_id = request.args.get('category_id', 'all')
     status = request.args.get('status', 'unlabeled')  # unlabeled, positive, negative
@@ -167,7 +188,11 @@ def annotate():
 @bp.route('/api/annotate', methods=['POST'])
 @login_required
 def submit_annotation():
-    """API endpoint for submitting annotations"""
+    """
+    API endpoint for submitting annotations.
+    
+    Receives annotation data via JSON and saves it to the database.
+    """
     data = request.json
     
     ticket_id = data.get('ticket_id')
@@ -198,7 +223,11 @@ def submit_annotation():
 @bp.route('/api/next_ticket')
 @login_required
 def next_ticket():
-    """API endpoint for getting the next ticket"""
+    """
+    API endpoint for getting the next ticket.
+    
+    Returns the next ticket in the sequence based on filter criteria.
+    """
     current_ticket_id = request.args.get('current_ticket_id')
     category_id = request.args.get('category_id', 'all')
     status = request.args.get('status', 'unlabeled')
@@ -256,13 +285,18 @@ def next_ticket():
 @bp.route('/load_sample_data')
 @login_required
 def load_sample_data():
-    """Load sample data from JSON file"""
+    """
+    Load sample data from JSON file.
+    
+    Imports ticket data from a JSON file and creates the necessary database records.
+    Only accessible to authenticated users.
+    """
     
     try:
         # Load JSON file
         input_file_path = current_app.config['TICKETS_JSON_FILE']
         if not os.path.exists(input_file_path):
-            flash(f'JSON file not found: {input_file_path}', 'error')
+            flash('JSON file not found: %s' % input_file_path, 'error')
             return redirect(url_for('main.dashboard'))
         
         df = pd.read_json(input_file_path, compression="gzip")
@@ -271,7 +305,7 @@ def load_sample_data():
         categories = [
             'account', 'background checks', 'document assistance', 
             'license and certification', 'shift attendance', 'shift cancellation', 
-            'payment', 'technical issues', 'timesheet submission'
+            'payment', 'technical issues', 'timesheet submission', 'others'
         ]
         
         category_objects = {}
@@ -309,15 +343,21 @@ def load_sample_data():
                 summary=row.get('SUMMARY', None),
                 conversation=row.get('CHAT_HISTORY', None),
                 tech_issue_likelihood=likelihood,
-                issue_description=row.get('ISSUE_DESCRIPTION', None)
+                issue_description=row.get('ISSUE_DESCRIPTION', None),
+                created_at_zendesk=datetime.strptime(row.get('CREATED_AT_PST', None), "%Y-%m-%d").date()
             )
             
             # Add categories
-            ticket_categories = row.get('categories', '').split(',')
+            ticket_categories = row.get('REQUEST_CATEGORIES', '')
+            any_category_ok = False
             for category_name in ticket_categories:
                 category_name = category_name.strip()
                 if category_name and category_name in category_objects:
                     ticket.categories.append(category_objects[category_name])
+                    any_category_ok = True
+
+            if not any_category_ok:
+                ticket.categories.append(category_objects['others'])
             
             db.session.add(ticket)
             tickets_added += 1
@@ -329,9 +369,9 @@ def load_sample_data():
         # Final commit
         db.session.commit()
         
-        flash(f'Successfully loaded {tickets_added} tickets from JSON file.', 'success')
+        flash('Successfully loaded %s tickets from JSON file.' % tickets_added, 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Error loading data: {str(e)}', 'error')
+        flash('Error loading data: %s' % str(e), 'error')
     
     return redirect(url_for('main.dashboard'))

@@ -1,6 +1,7 @@
 import os
 import json
-from flask import redirect, url_for, request, session, current_app, render_template, flash
+import secrets
+from flask import redirect, url_for, request, session, current_app, render_template, flash, session
 from flask_login import login_user, logout_user, current_user, login_required
 from authlib.integrations.flask_client import OAuth
 from app import db
@@ -30,18 +31,24 @@ def on_load(state):
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
-    
+
+    # Generate a secure nonce
+    nonce = secrets.token_urlsafe(16)
+    session['nonce'] = nonce
+
     # Redirect to Google OAuth
     redirect_uri = url_for('auth.callback', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce)
 
 @bp.route('/callback')
 def callback():
     # Get token from Google
     token = oauth.google.authorize_access_token()
-    
+
+    nonce = session.pop('nonce', None)  # Remove nonce from session after use
+
     # Get user info from Google
-    user_info = oauth.google.parse_id_token(token)
+    user_info = oauth.google.parse_id_token(token, nonce=nonce)
     
     # Check if user's email domain is allowed
     email = user_info.get('email', '')
